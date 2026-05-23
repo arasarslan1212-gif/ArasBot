@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Aras AI - Your intelligent search assistant powered by advanced AI" />
+  <meta name="theme-color" content="#f5f3f0" />
+  
+  <title>Aras AI</title>
+  
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <!-- ================================================
+       SIDEBAR (Navigation & History)
+  ================================================ -->
+  
+  <aside class="sidebar" id="sidebar">
+    
+    <!-- Sidebar Header -->
+    <div class="sidebar-header">
+      <div class="logo">
+        <div class="logo-icon">A</div>
+        <span class="logo-text">Aras AI</span>
+      </div>
+      
+      <button class="new-chat-btn" id="newChatBtn" aria-label="Start new conversation">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        New chat
+      </button>
+    </div>
+
+    <!-- Chat History -->
+    <div class="sidebar-section">
+      <h3 class="sidebar-section-title">Recent</h3>
+      <div class="chat-history" id="chatHistory">
+        <!-- History items will be inserted here by JS -->
+      </div>
+    </div>
+
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer">
+      <button class="sidebar-footer-btn" id="clearHistoryBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+        </svg>
+        Clear history
+      </button>
+      
+      <button class="sidebar-footer-btn" id="settingsBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+        </svg>
+        Settings
+      </button>
+    </div>
+
+  </aside>
+
+
+  <!-- ================================================
+       MAIN CONTENT AREA
+  ================================================ -->
+  
+  <main class="main-content">
+
+    <!-- Mobile Header (shows on small screens) -->
+    <header class="mobile-header">
+      <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12h18M3 6h18M3 18h18"/>
+        </svg>
+      </button>
+      <div class="mobile-logo">
+        <div class="logo-icon">A</div>
+        <span>Aras AI</span>
+      </div>
+    </header>
+
+
+    <!-- ================================================
+         CONVERSATION CONTAINER
+    ================================================ -->
+    
+    <div class="conversation-wrapper">
+      <div class="conversation-container" id="conversationContainer">
+
+        <!-- Welcome Screen (shown when no conversation) -->
+        <div class="welcome-screen" id="welcomeScreen">
+          
+          <div class="welcome-content">
+            <div class="welcome-icon">
+              <div class="welcome-icon-inner">A</div>
+            </div>
+            
+            <h1 class="welcome-title">How can I help you today?</h1>
+            
+            <p class="welcome-subtitle">
+              Ask me anything — from quick facts to detailed comparisons.
+              I can search, compare, and explain topics in a clear, conversational way.
+            </p>
+
+            <!-- Suggested Prompts -->
+            <div class="suggestions">
+              <button class="suggestion-card" data-prompt="Explain quantum computing in simple terms">
+                <div class="suggestion-icon">💡</div>
+                <div class="suggestion-text">
+                  <strong>Explain complex topics</strong>
+                  <span>Break down difficult concepts into simple language</span>
+                </div>
+              </button>
+
+              <button class="suggestion-card" data-prompt="Compare Python vs JavaScript for beginners">
+                <div class="suggestion-icon">⚖️</div>
+                <div class="suggestion-text">
+                  <strong>Compare options</strong>
+                  <span>Get detailed comparisons to make better decisions</span>
+                </div>
+              </button>
+
+              <button class="suggestion-card" data-prompt="What are the latest developments in AI?">
+                <div class="suggestion-icon">🔍</div>
+                <div class="suggestion-text">
+                  <strong>Research topics</strong>
+                  <span>Find accurate information on any subject</span>
+                </div>
+              </button>
+
+              <button class="suggestion-card" data-prompt="Help me plan a trip to Japan">
+                <div class="suggestion-icon">✈️</div>
+                <div class="suggestion-text">
+                  <strong>Plan and organize</strong>
+                  <span>Get help with planning, ideas, and recommendations</span>
+                </div>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Messages Container (shown during conversation) -->
+        <div class="messages-container" id="messagesContainer">
+          <!-- Messages will be inserted here by JS -->
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ================================================
+         INPUT AREA (Fixed at Bottom)
+    ================================================ -->
+    
+    <div class="input-area">
+      <div class="input-container">
+        
+        <form class="input-form" id="inputForm">
+          
+          <div class="input-wrapper">
+            
+            <textarea 
+              id="messageInput"
+              class="message-input"
+              placeholder="Ask anything..."
+              rows="1"
+              aria-label="Message input"
+            ></textarea>
+
+            <div class="input-actions">
+              
+              <!-- Voice Input Button -->
+              <button 
+                type="button" 
+                class="input-action-btn" 
+                id="voiceBtn"
+                aria-label="Voice input"
+                title="Voice input"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+                  <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/>
+                </svg>
+              </button>
+
+              <!-- Submit Button -->
+              <button 
+                type="submit" 
+                class="send-btn" 
+                id="sendBtn"
+                aria-label="Send message"
+                disabled
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                </svg>
+              </button>
+
+            </div>
+
+          </div>
+
+          <!-- Input Footer Info -->
+          <div class="input-footer">
+            <span class="input-hint">
+              Aras AI can make mistakes. Check important info.
+            </span>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+
+  </main>
+
+
+  <!-- ================================================
+       SETTINGS MODAL (Hidden by default)
+  ================================================ -->
+  
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="modal-close" id="closeSettingsBtn" aria-label="Close settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-content">
+        
+        <!-- Voice Settings -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">Voice</h3>
+          
+          <div class="setting-item">
+            <div class="setting-info">
+              <label for="voiceOutputToggle">Voice responses</label>
+              <span class="setting-description">Hear answers read aloud</span>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="voiceOutputToggle" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Appearance Settings -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">Appearance</h3>
+          
+          <div class="setting-item">
+            <div class="setting-info">
+              <label for="themeSelect">Theme</label>
+              <span class="setting-description">Choose your interface theme</span>
+            </div>
+            <select id="themeSelect" class="setting-select">
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="auto">Auto</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- About -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">About</h3>
+          <p class="about-text">
+            Aras AI is an intelligent search assistant that helps you find information,
+            compare options, and understand complex topics through natural conversation.
+          </p>
+          <p class="about-version">Version 1.0.0</p>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- JavaScript -->
+  <script src="script.js"></script>
+
+</body>
+</html>
