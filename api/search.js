@@ -1,3 +1,5 @@
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
 module.exports = async (req, res) => {
 
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,10 +18,12 @@ module.exports = async (req, res) => {
     const { query } = req.body;
 
     if (!query) {
-      return res.status(400).json({ error: 'Query is required' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'Query is required' 
+      });
     }
 
-    const { GoogleGenerativeAI } = require('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
