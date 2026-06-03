@@ -1,12 +1,7 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
 module.exports = async (req, res) => {
-  
-  // Allow requests from anywhere
+
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
@@ -24,23 +19,23 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Query is required' });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    const prompt = `Answer this question in 2-4 sentences: ${query}`;
+    const result = await model.generateContent(query);
+    const text = result.response.text();
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       answer: text
     });
 
   } catch (error) {
-    res.status(500).json({
+    console.error('Error:', error.message);
+    return res.status(500).json({
       success: false,
-      error: 'Search failed'
+      error: error.message
     });
   }
 };
