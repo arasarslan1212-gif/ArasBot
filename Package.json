@@ -1,8 +1,7 @@
 {
   "name": "aras-ai",
   "version": "1.0.0",
-  "description": "Aras AI Platform powered by Gemini",
   "dependencies": {
-    "@google/generative-ai": "^0.1.3"
+    "@google/generative-ai": "^0.21.0"
   }
 }
