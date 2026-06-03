@@ -774,13 +774,7 @@ const observerOptions = {
 };
 
 // Export for debugging (development only)
-if (process.env.NODE_ENV === 'development') {
-  window.ArasAI = {
-    currentConversation,
-    conversationHistory,
-    sendToAPI,
-    clearAllHistory,
-    loadSettings,
-    saveSettings
-  };
-}
+window.ArasAI = {
+  currentConversation,
+  conversationHistory
+};
