@@ -504,6 +504,100 @@
       white-space: pre-wrap;
     }
 
+    /* Markdown-rendered AI messages */
+    .message-text.markdown {
+      white-space: normal;
+    }
+
+    .message-text.markdown p {
+      margin-bottom: 0.75rem;
+    }
+
+    .message-text.markdown p:last-child {
+      margin-bottom: 0;
+    }
+
+    .message-text.markdown h1,
+    .message-text.markdown h2,
+    .message-text.markdown h3,
+    .message-text.markdown h4 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 1.25rem 0 0.5rem;
+    }
+
+    .message-text.markdown ul,
+    .message-text.markdown ol {
+      margin: 0.5rem 0 0.75rem;
+      padding-left: 1.5rem;
+    }
+
+    .message-text.markdown li {
+      margin-bottom: 0.25rem;
+    }
+
+    .message-text.markdown code {
+      background: var(--bg-secondary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+    }
+
+    .message-text.markdown pre {
+      background: #2d2d2d;
+      color: #f0f0f0;
+      padding: 1rem;
+      border-radius: var(--radius-md);
+      overflow-x: auto;
+      margin: 0.75rem 0;
+    }
+
+    .message-text.markdown pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+
+    .message-text.markdown table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 0.75rem 0;
+      font-size: 14px;
+      display: block;
+      overflow-x: auto;
+    }
+
+    .message-text.markdown th,
+    .message-text.markdown td {
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      text-align: left;
+    }
+
+    .message-text.markdown th {
+      background: var(--bg-secondary);
+      font-weight: 600;
+    }
+
+    .message-text.markdown blockquote {
+      border-left: 3px solid var(--accent);
+      padding-left: 1rem;
+      color: var(--text-secondary);
+      margin: 0.75rem 0;
+    }
+
+    .message-text.markdown hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 1rem 0;
+    }
+
+    .message-text.markdown a {
+      color: var(--accent-hover);
+      text-decoration: underline;
+    }
+
     .message.user .message-text {
       color: var(--text-secondary);
     }
@@ -528,6 +622,13 @@
     @keyframes typingBounce {
       0%, 60%, 100% { transform: translateY(0); }
       30% { transform: translateY(-8px); }
+    }
+
+    .typing-status {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      font-style: italic;
+      margin-top: 4px;
     }
 
     .message-error {
@@ -1077,6 +1178,10 @@
   ===================================================== -->
   <script src="https://js.puter.com/v2/"></script>
 
+  <!-- Markdown rendering (tables, code blocks, bold, etc.) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+
 
   <!-- =====================================================
        JAVASCRIPT - All app logic
@@ -1231,19 +1336,175 @@
     }
 
 
-    /* ---------- AI (PUTER) ---------- */
+    /* ---------- MULTI-AI SYSTEM (PUTER) ----------
+       Tier 1 - CASUAL:   1 AI answers (fast)
+       Tier 2 - MODERATE: GPT + Claude cross-check each other
+       Tier 3 - HARD:     GPT + Claude + Gemini work together
+    ------------------------------------------------ */
+
+    const MODELS = {
+      classifier: 'gpt-4o-mini',
+      gpt: 'gpt-4o',
+      claude: 'claude-sonnet-4',
+      gemini: 'gemini-2.0-flash'
+    };
 
     async function askAI(query) {
 
-      // Send the full conversation so the AI remembers context
-      const messages = currentConversation.map(m => ({
+      // Step 1: Classify how hard the question is
+      const difficulty = await classifyDifficulty(query);
+      console.log('Difficulty:', difficulty);
+
+      // Step 2: Route to the right tier
+      if (difficulty === 'HARD') {
+        setTypingStatus('Deep mode &middot; 3 AIs working together...');
+        return await tripleAnswer(query);
+      }
+
+      if (difficulty === 'MODERATE') {
+        setTypingStatus('Cross-checking with Claude...');
+        return await doubleAnswer(query);
+      }
+
+      setTypingStatus('');
+      return await singleAnswer(query);
+    }
+
+
+    /* ---- Difficulty classifier ---- */
+
+    async function classifyDifficulty(query) {
+      try {
+        const prompt =
+          'Classify this question into exactly one word: CASUAL, MODERATE, or HARD.\n\n' +
+          'CASUAL = greetings, small talk, simple everyday questions\n' +
+          'MODERATE = factual questions, explanations, comparisons, homework help\n' +
+          'HARD = complex reasoning, advanced math/science, multi-step analysis, ' +
+          'technical deep-dives, important decisions\n\n' +
+          'Question: "' + query + '"\n\n' +
+          'Reply with ONLY the single word.';
+
+        const raw = await callModel(MODELS.classifier, [{ role: 'user', content: prompt }]);
+        const answer = raw.trim().toUpperCase();
+
+        if (answer.includes('HARD')) return 'HARD';
+        if (answer.includes('MODERATE')) return 'MODERATE';
+        return 'CASUAL';
+
+      } catch (e) {
+        return 'CASUAL'; // If classification fails, keep it simple
+      }
+    }
+
+
+    /* ---- Tier 1: single AI ---- */
+
+    async function singleAnswer(query) {
+      const messages = buildMessages();
+      return await callModel(MODELS.gpt, messages);
+    }
+
+
+    /* ---- Tier 2: two AIs cross-check ---- */
+
+    async function doubleAnswer(query) {
+      const messages = buildMessages();
+
+      // Ask GPT and Claude at the same time
+      const results = await Promise.allSettled([
+        callModel(MODELS.gpt, messages),
+        callModel(MODELS.claude, messages)
+      ]);
+
+      const answers = results
+        .filter(r => r.status === 'fulfilled')
+        .map(r => r.value);
+
+      // If only one succeeded, just use it
+      if (answers.length === 1) return answers[0];
+      if (answers.length === 0) throw new Error('All models failed');
+
+      // Have Claude merge both answers into one verified answer
+      const mergePrompt =
+        'Two AI assistants answered the same question. Combine them into ONE ' +
+        'accurate, well-written final answer. Fix any errors or disagreements. ' +
+        'Do not mention that there were two answers - just give the final answer.\n\n' +
+        'Question: ' + query + '\n\n' +
+        'Answer A:\n' + answers[0] + '\n\n' +
+        'Answer B:\n' + answers[1];
+
+      try {
+        return await callModel(MODELS.claude, [{ role: 'user', content: mergePrompt }]);
+      } catch (e) {
+        return answers[0]; // Fallback to first answer if merge fails
+      }
+    }
+
+
+    /* ---- Tier 3: three AIs together ---- */
+
+    async function tripleAnswer(query) {
+      const messages = buildMessages();
+
+      // Ask GPT, Claude and Gemini all at the same time
+      const results = await Promise.allSettled([
+        callModel(MODELS.gpt, messages),
+        callModel(MODELS.claude, messages),
+        callModel(MODELS.gemini, messages)
+      ]);
+
+      const answers = results
+        .filter(r => r.status === 'fulfilled')
+        .map(r => r.value);
+
+      if (answers.length === 1) return answers[0];
+      if (answers.length === 0) throw new Error('All models failed');
+
+      // Synthesize all answers into one best answer
+      let synthesisPrompt =
+        'Three AI assistants (GPT, Claude, Gemini) answered the same difficult question. ' +
+        'Study all answers, resolve any disagreements using the most accurate information, ' +
+        'and write ONE final, comprehensive, correct answer. ' +
+        'Do not mention the other AIs - just give the best possible final answer.\n\n' +
+        'Question: ' + query + '\n\n';
+
+      answers.forEach((a, i) => {
+        synthesisPrompt += 'Answer ' + (i + 1) + ':\n' + a + '\n\n';
+      });
+
+      try {
+        return await callModel(MODELS.claude, [{ role: 'user', content: synthesisPrompt }]);
+      } catch (e) {
+        return answers[0];
+      }
+    }
+
+
+    /* ---- Shared helpers ---- */
+
+    function buildMessages() {
+      const systemMsg = {
+        role: 'system',
+        content:
+          'You are Aras AI, a helpful and friendly assistant. ' +
+          'Keep answers clear and well-organized. Use markdown formatting ' +
+          '(headings, bullet points, tables) only when it genuinely helps. ' +
+          'For simple questions, answer in a few sentences. ' +
+          'Avoid overly long answers unless the user asks for detail.'
+      };
+
+      return [systemMsg, ...currentConversation.map(m => ({
         role: m.role,
         content: m.content
-      }));
+      }))];
+    }
 
-      const response = await puter.ai.chat(messages);
+    async function callModel(model, messages) {
+      const response = await puter.ai.chat(messages, { model: model });
+      return extractText(response);
+    }
 
-      // Puter can return different formats - handle them all
+    function extractText(response) {
       if (typeof response === 'string') return response;
       if (response?.message?.content) {
         const content = response.message.content;
@@ -1253,7 +1514,6 @@
         }
       }
       if (response?.text) return response.text;
-
       return String(response);
     }
 
@@ -1267,11 +1527,21 @@
       const avatar = role === 'user' ? 'You' : 'A';
       const label = role === 'user' ? 'You' : 'Aras AI';
 
+      // AI messages get markdown rendering, user messages stay plain text
+      let body;
+      if (role === 'assistant' && window.marked && window.DOMPurify) {
+        body = DOMPurify.sanitize(marked.parse(text));
+      } else {
+        body = escapeHtml(text);
+      }
+
+      const textClass = role === 'assistant' ? 'message-text markdown' : 'message-text';
+
       el.innerHTML =
         '<div class="message-avatar">' + avatar + '</div>' +
         '<div class="message-content">' +
           '<div class="message-role">' + label + '</div>' +
-          '<div class="message-text">' + escapeHtml(text) + '</div>' +
+          '<div class="' + textClass + '">' + body + '</div>' +
         '</div>';
 
       messagesContainer.appendChild(el);
@@ -1293,11 +1563,17 @@
             '<div class="typing-dot"></div>' +
             '<div class="typing-dot"></div>' +
           '</div>' +
+          '<div class="typing-status" id="typingStatus"></div>' +
         '</div>';
 
       messagesContainer.appendChild(el);
       scrollToBottom();
       return id;
+    }
+
+    function setTypingStatus(text) {
+      const statusEl = document.getElementById('typingStatus');
+      if (statusEl) statusEl.innerHTML = text;
     }
 
     function removeTyping(id) {
